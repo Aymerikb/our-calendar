@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
 import streamlit as st
+from streamlit_calendar import calendar  # Correction mineure sur l'import officiel
 
 # ========================================================
 # 1. FONCTIONS DE LA BASE DE DONNÉES (Le Backend)
@@ -128,7 +129,7 @@ if bouton_valider and titre:
 
 st.markdown("---")
 
-# --- AFFICHAGE CONVERTI ---
+# --- AFFICHAGE CONVERTI AVEC CALENDRIER STYLE IPHONE ---
 st.header(langue["h_liste"])
 
 evenements_stockes = recuperer_events()
@@ -138,16 +139,37 @@ if not evenements_stockes:
 else:
     tz_affichage = tz_france if emplacement == "En France 🇫🇷" else tz_coree
     
+    # 1. On prépare la liste des événements au format attendu par le calendrier visuel
+    evenements_calendrier = []
+
     for rdv in evenements_stockes:
+        # ICI : Remplacement des "..." par ton vrai code de traitement des dates
         debut_utc = datetime.strptime(rdv[1], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("UTC"))
         fin_utc = datetime.strptime(rdv[2], "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("UTC"))
         
+        # On convertit dans le fuseau de celui qui regarde l'écran
         debut_converti = debut_utc.astimezone(tz_affichage)
         fin_converti = fin_utc.astimezone(tz_affichage)
         
-        str_debut = debut_converti.strftime("%d/%m à %H:%M" if emplacement == "En France 🇫🇷" else "%m/%d %H:%M")
-        str_fin = fin_converti.strftime("%H:%M")
-        
-        st.write(f"**{rdv[0]}**")
-        st.caption(f"🗓️ {str_debut} ~ {str_fin} ({langue['heure_locale']}) | ✍️ {langue['cree_par']} : {rdv[3]}")
-        st.markdown("---")
+        # On remplit le dictionnaire avec les vraies variables calculées
+        evenements_calendrier.append({
+            "title": f"{rdv[0]} ({rdv[3]})", # Titre de l'activité + qui l'a créée
+            "start": debut_converti.isoformat(),
+            "end": fin_converti.isoformat(),
+            "color": "#FF2D55" if rdv[3] == "Moi / 나" else "#5856D6" # Rose pour toi, Bleu/Violet pour elle (couleurs iOS iOS)
+        })
+
+    # 2. Les options pour le look épuré
+    options_calendrier = {
+        "initialView": "dayGridMonth",
+        "headerToolbar": {
+            "left": "prev,next today",
+            "center": "title",
+            "right": "dayGridMonth,timeGridWeek,timeGridDay"
+        },
+        "locale": "fr" if emplacement == "En France 🇫🇷" else "ko"
+    }
+
+    # 3. Affichage du composant magique
+    calendar(events=evenements_calendrier, options=options_calendrier)
+       
